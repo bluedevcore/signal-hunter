@@ -50,7 +50,7 @@ Put all of them in `.env.example` with a comment each. Never log secrets.
 - **runs**: id, started_at, finished_at, trigger (cron | manual), status, counts JSON per stage (scanned, after_noise, after_desk, strong, sme, diagnosed, enriched, new_leads), cost_estimate_gbp, error
 - **jobs**: id, source ('reed'), source_job_id (unique per source), title, company_name, location, salary_min, salary_max, posted_at, closes_at, url, description_html (raw), description (plain text), **responsibilities (text[])**, **responsibilities_source (section | claude)**, **requirements (text[]: skills, systems, experience)**, run_id, filter_status (kept | dropped), drop_reason
 - **companies**: id, name, normalised_name (unique), ch_number, ch_status, accounts_type, size_band (micro | small | medium | large | unknown), directors JSON, registered_address, website, domain, main_phone, is_group (bool), notes
-- **diagnoses**: id, job_id (unique), desk_fit (strong | partial | poor), build_difficulty (1–5), replace_score (0–10), improve_score (= 10 − replace), problem, evidence (quote from the ad), solution, **duty_coverage (jsonb: [{duty, coverage: full | partial | none, how}])**, systems (text[]), call_opener, **build_brief (text, nullable)**, model, created_at
+- **diagnoses**: id, job_id (unique), desk_fit (strong | partial | poor), ease_of_build (1–5, 5 = easiest), replace_score (0–10), improve_score (= 10 − replace), problem, evidence (quote from the ad), solution, **duty_coverage (jsonb: [{duty, coverage: full | partial | none, how}])**, systems (text[]), call_opener, **build_brief (text, nullable)**, model, created_at
 - **contacts**: id, company_id, name, title, email, email_status (verified | unverified | unknown), phone, linkedin, source (getleads | companies_house | apify | manual), notes
 - **leads**: id, job_id (unique), company_id, stage, stage_changed_at, next_action, next_action_at, est_value_gbp_month, score, archived (bool). **One lead per job ad.** Leads at the same company share that company's contacts and link to each other ("Also hiring at …").
 - **tools**: id, name (data_validation, bookkeeping, compliance, listings, leasehold_packs, bid_writer, …), status (queued | in_progress | built | live), description, repo_path
@@ -121,12 +121,12 @@ Run each stage as its own step. Store progress on the `runs` row so the Runs pag
      Save to `jobs.responsibilities`, with `responsibilities_source = claude` when the parser had nothing.
    - `duty_coverage`: one entry per responsibility, `{duty, coverage: full | partial | none, how}`. `how` is a few words on what the tool does for that duty. This is the evidence behind `replace_score`.
    - `desk_fit`: strong = on a computer most of the day producing work; partial = mixed; poor = mostly people or physical
-   - `build_difficulty` 1–5:
-     - 1: standalone, documents in → text out
-     - 2: one file or form in → one spreadsheet or system out
+   - `ease_of_build` 1–5 (higher is easier):
+     - 5: standalone, documents in → text out
+     - 4: one file or form in → one spreadsheet or system out
      - 3: connects to their accounting / CRM / ops software
-     - 4: several systems plus people in the loop
-     - 5: unclear or mixed
+     - 2: several systems plus people in the loop
+     - 1: unclear or mixed
    - `replace_score` 0–10: how much of the role a tool could do outright, based on `duty_coverage` (full counts 1, partial 0.5, weighted by how much of the week each duty likely takes). Improve is 10 minus this. Be conservative: almost nothing is above 7.
    - `problem`: one line on **why** they're hiring (growth, manual process, backlog, new system, nobody owns it). Not a list of duties.
    - `evidence`: a short exact quote from the ad that shows the problem
@@ -152,7 +152,7 @@ Run each stage as its own step. Store progress on the `runs` row so the Runs pag
 
 8. **Create leads.**
    - One lead per job ad. Stage New.
-   - `score = replace_score × (6 − build_difficulty)`, plus a bonus if size = small and a bonus if a named contact has a phone.
+   - `score = replace_score × ease_of_build`, plus a bonus if size = small and a bonus if a named contact has a phone.
    - Skip jobs whose closing date has passed.
    - If the company already has other leads, link them. Add a note to each existing lead ("Also hiring: …"). Reuse the company's contacts rather than looking them up again.
 
@@ -166,14 +166,14 @@ Run each stage as its own step. Store progress on the `runs` row so the Runs pag
   - a search box and a "Run hunt now" button
   - one segmented stat strip with 4 cells, each with a monospace label, a number, a short note and a thin share bar:
     - strong desk fit (of all diagnosed)
-    - easiest builds (D1 + D2)
+    - easiest builds (ease 5 and 4)
     - SMBs
     - in pipeline
 
   No banner for calls due: those live in the sidebar's "Today" count and in Call mode. Then:
-  - Filters: stage, desk fit, build difficulty, size, salary range, closes within N days, has phone.
-  - Default view: Strong only, sorted by build difficulty ascending, then score descending.
-  - Columns: company, role(s), salary, closes, difficulty, replace/improve, best contact, phone, stage, next action.
+  - Filters: stage, desk fit, ease of build, size, salary range, closes within N days, has phone.
+  - Default view: Strong only, sorted by ease of build descending (5 first), then score descending.
+  - Columns: company, role(s), salary, closes, ease of build, replace/improve, best contact, phone, stage, next action.
   - Bulk stage change and CSV export.
 - **Lead detail:**
   - Header: company, size, website, main phone as a `tel:` link.
@@ -192,7 +192,7 @@ Run each stage as its own step. Store progress on the `runs` row so the Runs pag
   - **Call panel:** opener, problem in one line, and a "Generate call script" button. Claude writes a 60-second script from the diagnosis and saves it to the lead.
   - **Log activity:** type, outcome and note, in one quick form. After a call, prompt for the next action and date.
   - Stage dropdown and an activity timeline.
-  - **"Also hiring at {company}"**: the company's other leads, each with salary, difficulty, scores and stage.
+  - **"Also hiring at {company}"**: the company's other leads, each with salary, ease of build, scores and stage.
 - **Pipeline:** a kanban board by stage, one card per job ad, with drag-and-drop to change stage.
 - **Hunts (runs):** the weekly funnel, why jobs were dropped (count per rule, with a link to every dropped job), and run history with listings / after filters / desk roles / strong / cost.
 - **Builds:**
@@ -232,7 +232,7 @@ Match the agreed design: https://claude.ai/artifact/DPZCmK8LVm8WPgyCWA77y9 (scre
   - rows about 60px tall: role · company · place · size on line one, the problem on line two
 - Tables with monospace number columns.
 - Replace / improve shown as a dark-on-grey split bar.
-- Difficulty shown as "D1" plus five small dots.
+- Ease of build shown as "5/5" plus five small dots (filled = easier). Always called "ease of build", never "difficulty".
 
 Clean, fast and keyboard-friendly. Works on a phone.
 
@@ -242,7 +242,7 @@ Clean, fast and keyboard-friendly. Works on a phone.
 
 `/seed` contains:
 
-- `job_problems.csv`: 257 diagnosed jobs from 5 Nov 2026. Columns: company, role, location, salary, closes, size_guess, desk_fit, build_difficulty_1to5, replace_score, improve_score, problem, evidence_from_ad, **responsibilities** (duties separated by ` | `, parsed from the ad's responsibilities section; blank where the ad had no clear section), ai_solution, ad_link, scan.
+- `job_problems.csv`: 257 diagnosed jobs from 5 Nov 2026. Columns: company, role, location, salary, closes, size_guess, desk_fit, ease_of_build_1to5 (5 = easiest), replace_score, improve_score, problem, evidence_from_ad, **responsibilities** (duties separated by ` | `, parsed from the ad's responsibilities section; blank where the ad had no clear section), ai_solution, ad_link, scan.
 - `target_contacts.csv`: the 16 companies already pitched or queued, with contacts and phone numbers.
 
 Write `pnpm seed`. It should:
