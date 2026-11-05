@@ -6,10 +6,16 @@ import type { PgDatabase } from "drizzle-orm/pg-core";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = PgDatabase<any, typeof schema>;
 
-const g = globalThis as unknown as { __db?: DB; __dbKind?: "neon" | "pglite" };
+const g = globalThis as unknown as { __db?: DB; __dbKind?: "neon" | "pg" | "pglite" };
 
-async function create(): Promise<{ db: DB; kind: "neon" | "pglite" }> {
+async function create(): Promise<{ db: DB; kind: "neon" | "pg" | "pglite" }> {
   const url = process.env.DATABASE_URL;
+  if (url && url.startsWith("postgres") && !url.includes("neon.tech")) {
+    // Supabase (or any standard Postgres). prepare:false is required for Supabase's transaction pooler (port 6543).
+    const postgres = (await import("postgres")).default;
+    const { drizzle } = await import("drizzle-orm/postgres-js");
+    return { db: drizzle(postgres(url, { prepare: false, max: 1 }), { schema }) as unknown as DB, kind: "pg" };
+  }
   if (url && url.startsWith("postgres")) {
     const { neon } = await import("@neondatabase/serverless");
     const { drizzle } = await import("drizzle-orm/neon-http");
@@ -32,7 +38,11 @@ export async function getDb(): Promise<DB> {
 
 export async function migrateDb() {
   const db = await getDb();
-  if (g.__dbKind === "neon") {
+  if (g.__dbKind === "pg") {
+    const { migrate } = await import("drizzle-orm/postgres-js/migrator");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await migrate(db as any, { migrationsFolder: "./drizzle" });
+  } else if (g.__dbKind === "neon") {
     const { migrate } = await import("drizzle-orm/neon-http/migrator");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await migrate(db as any, { migrationsFolder: "./drizzle" });

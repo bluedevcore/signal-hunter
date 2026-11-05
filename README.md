@@ -5,7 +5,9 @@ A private CRM for finding UK SMBs hiring for desk roles an AI tool can do, worki
 ## Deploy on Vercel
 
 1. vercel.com → Add New → Project → import `bluedevcore/signal-hunter`. Framework: Next.js (detected). Deploy.
-2. Project → Storage → Create Database → Neon (Postgres) → connect to the project. This adds `DATABASE_URL`.
+2. Database, either:
+   - **Supabase:** create a project at supabase.com → Connect → copy the **Transaction pooler** URI (port 6543), put your database password in it, and add it in Vercel as `DATABASE_URL`.
+   - **Neon:** Project → Storage → Create Database → Neon, which adds `DATABASE_URL` for you.
 3. Project → Settings → Environment Variables: add `APP_PASSWORD`, `AUTH_SECRET` (long random string) and, optionally, `ANTHROPIC_API_KEY`.
 4. Redeploy (Deployments → ⋯ → Redeploy).
 5. Open the site, sign in, go to **/setup** and click **Set up database**. This creates the tables and loads the seed data.
