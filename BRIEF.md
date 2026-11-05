@@ -232,7 +232,7 @@ Match the agreed design: https://claude.ai/artifact/DPZCmK8LVm8WPgyCWA77y9 (scre
   - rows about 60px tall: role · company · place · size on line one, the problem on line two
 - Tables with monospace number columns.
 - Replace / improve shown as a dark-on-grey split bar.
-- Ease of build shown as "5/5" plus five small dots (filled = easier). Always called "ease of build", never "difficulty".
+- Ease of build is shown as five small bars only, with no number (more filled bars = easier); the number goes in an aria-label. Always called "ease of build", never "difficulty".
 
 Clean, fast and keyboard-friendly. Works on a phone.
 
