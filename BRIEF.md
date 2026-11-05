@@ -162,13 +162,15 @@ Run each stage as its own step. Store progress on the `runs` row so the Runs pag
 
 ## 5. Pages
 
-- **Dashboard:**
-  - this week's new leads
-  - follow-ups due today and overdue
-  - the last run's funnel (the same eight stages as a simple funnel chart)
-  - leads by stage
-  - a "Run hunt now" button
-- **Leads table:**
+- **Leads (the home page):** no separate dashboard. The top is:
+  - a search box and a "Run hunt now" button
+  - one segmented stat strip with 4 cells, each with a monospace label, a number, a short note and a thin share bar:
+    - strong desk fit (of all diagnosed)
+    - easiest builds (D1 + D2)
+    - SMBs
+    - in pipeline
+
+  No banner for calls due: those live in the sidebar's "Today" count and in Call mode. Then:
   - Filters: stage, desk fit, build difficulty, size, salary range, closes within N days, has phone.
   - Default view: Strong only, sorted by build difficulty ascending, then score descending.
   - Columns: company, role(s), salary, closes, difficulty, replace/improve, best contact, phone, stage, next action.
