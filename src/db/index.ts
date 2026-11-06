@@ -14,7 +14,7 @@ async function create(): Promise<{ db: DB; kind: "neon" | "pg" | "pglite" }> {
     // Supabase (or any standard Postgres). prepare:false is required for Supabase's transaction pooler (port 6543).
     const postgres = (await import("postgres")).default;
     const { drizzle } = await import("drizzle-orm/postgres-js");
-    return { db: drizzle(postgres(url, { prepare: false, max: 1, connect_timeout: 10, idle_timeout: 20 }), { schema }) as unknown as DB, kind: "pg" };
+    return { db: drizzle(postgres(url, { prepare: false, max: 5, connect_timeout: 10, idle_timeout: 20 }), { schema }) as unknown as DB, kind: "pg" };
   }
   if (url && url.startsWith("postgres")) {
     const { neon } = await import("@neondatabase/serverless");

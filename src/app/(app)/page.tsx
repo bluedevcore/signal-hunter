@@ -34,8 +34,7 @@ function hrefWith(sp: SP, key: string, value: string | null) {
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<SP> }) {
   if (!(await dbReady())) redirect("/setup");
   const sp = await searchParams;
-  const all = await allLeads();
-  const diagnosed = await diagnosedCount();
+  const [all, diagnosed] = await Promise.all([allLeads(), diagnosedCount()]);
   const q = (sp.q || "").toLowerCase().trim();
   const stage = sp.stage || "";
   const sort = sp.sort || "ease";

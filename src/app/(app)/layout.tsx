@@ -1,11 +1,11 @@
 import { Sidebar } from "@/components/Sidebar";
-import { dbReady, sidebarCounts } from "@/lib/queries";
+import { sidebarCounts } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const ready = await dbReady();
-  const counts = ready ? await sidebarCounts() : { leads: null, today: null };
+  // One round trip: if the tables don't exist yet the count query fails and we show no counts.
+  const counts = await sidebarCounts().catch(() => ({ leads: null, today: null }));
   return (
     <div className="min-h-screen flex flex-wrap items-stretch">
       <Sidebar leads={counts.leads} today={counts.today} />

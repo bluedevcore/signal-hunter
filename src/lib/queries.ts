@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { eq, sql, desc, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { today } from "./util";
@@ -6,7 +7,7 @@ const { leads, jobs, companies, diagnoses, contacts, activities, tools, demos, r
 
 export type LeadRow = Awaited<ReturnType<typeof allLeads>>[number];
 
-export async function dbReady(): Promise<boolean> {
+export const dbReady = cache(async function dbReady(): Promise<boolean> {
   try {
     const db = await getDb();
     await db.select({ n: sql<number>`1` }).from(leads).limit(1);
@@ -15,11 +16,11 @@ export async function dbReady(): Promise<boolean> {
     console.error("dbReady:", e instanceof Error ? `${e.message} ${(e as Error & { cause?: Error }).cause?.message ?? ""}` : e);
     return false;
   }
-}
+});
 
-export async function allLeads() {
+export const allLeads = cache(async function allLeads() {
   const db = await getDb();
-  const rows = await db
+  const rowsQ = db
     .select({
       id: leads.id, stage: leads.stage, score: leads.score, nextAction: leads.nextAction, nextActionAt: leads.nextActionAt,
       jobId: jobs.id, role: jobs.title, location: jobs.location, salaryText: jobs.salaryText, salaryMax: jobs.salaryMax,
@@ -33,12 +34,15 @@ export async function allLeads() {
     .innerJoin(companies, eq(leads.companyId, companies.id))
     .leftJoin(diagnoses, eq(diagnoses.jobId, jobs.id))
     .where(eq(leads.archived, false));
-  const phones = await db.select({ companyId: contacts.companyId, phone: contacts.phone }).from(contacts);
+  const [rows, phones, dem] = await Promise.all([
+    rowsQ,
+    db.select({ companyId: contacts.companyId, phone: contacts.phone }).from(contacts),
+    db.select({ leadId: demos.leadId, tool: tools.name, status: demos.status }).from(demos).leftJoin(tools, eq(demos.toolId, tools.id)),
+  ]);
   const withPhone = new Set(phones.filter((p) => p.phone).map((p) => p.companyId));
-  const dem = await db.select({ leadId: demos.leadId, tool: tools.name, status: demos.status }).from(demos).leftJoin(tools, eq(demos.toolId, tools.id));
   const demoBy = new Map(dem.map((d) => [d.leadId, d]));
   return rows.map((r) => ({ ...r, hasPhone: !!r.mainPhone || withPhone.has(r.companyId), demo: demoBy.get(r.id) || null }));
-}
+});
 
 export async function diagnosedCount() {
   const db = await getDb();
@@ -46,14 +50,15 @@ export async function diagnosedCount() {
   return a.n;
 }
 
-export async function sidebarCounts() {
+export const sidebarCounts = cache(async function sidebarCounts() {
   const db = await getDb();
   const t = today();
-  const [a] = await db.select({ n: sql<number>`count(*)::int` }).from(leads).where(eq(leads.archived, false));
-  const [b] = await db.select({ n: sql<number>`count(*)::int` }).from(leads)
-    .where(sql`${leads.archived} = false and ${leads.nextActionAt} is not null and ${leads.nextActionAt} <= ${t}`);
-  return { leads: a.n, today: b.n };
-}
+  const [r] = await db.select({
+    leads: sql<number>`count(*) filter (where ${leads.archived} = false)::int`,
+    today: sql<number>`count(*) filter (where ${leads.archived} = false and ${leads.nextActionAt} is not null and ${leads.nextActionAt} <= ${t})::int`,
+  }).from(leads);
+  return { leads: r.leads, today: r.today };
+});
 
 export async function leadDetail(id: number) {
   const db = await getDb();
@@ -65,13 +70,16 @@ export async function leadDetail(id: number) {
     .leftJoin(diagnoses, eq(diagnoses.jobId, jobs.id))
     .where(eq(leads.id, id));
   if (!row) return null;
-  const people = await db.select().from(contacts).where(eq(contacts.companyId, row.company.id));
-  const timeline = await db.select().from(activities).where(eq(activities.leadId, id)).orderBy(desc(activities.createdAt));
-  const siblings = await db
+  const [people, timeline, siblings, demoRows] = await Promise.all([
+    db.select().from(contacts).where(eq(contacts.companyId, row.company.id)),
+    db.select().from(activities).where(eq(activities.leadId, id)).orderBy(desc(activities.createdAt)),
+    db
     .select({ id: leads.id, stage: leads.stage, role: jobs.title, salaryText: jobs.salaryText, ease: diagnoses.easeOfBuild, replace: diagnoses.replaceScore, improve: diagnoses.improveScore, problem: diagnoses.problem })
     .from(leads).innerJoin(jobs, eq(leads.jobId, jobs.id)).leftJoin(diagnoses, eq(diagnoses.jobId, jobs.id))
-    .where(sql`${leads.companyId} = ${row.company.id} and ${leads.id} <> ${id}`);
-  const [demo] = await db.select({ status: demos.status, tool: tools.name, liveUrl: demos.liveUrl }).from(demos).leftJoin(tools, eq(demos.toolId, tools.id)).where(eq(demos.leadId, id));
+    .where(sql`${leads.companyId} = ${row.company.id} and ${leads.id} <> ${id}`),
+    db.select({ status: demos.status, tool: tools.name, liveUrl: demos.liveUrl }).from(demos).leftJoin(tools, eq(demos.toolId, tools.id)).where(eq(demos.leadId, id)),
+  ]);
+  const demo = demoRows[0];
   return { ...row, people, timeline, siblings, demo: demo || null };
 }
 
