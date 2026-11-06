@@ -9,6 +9,8 @@ export async function middleware(req: NextRequest) {
   }
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/login")) return NextResponse.next();
+  // Vercel Cron and the hunt's own self-chaining call these with the cron secret.
+  if (pathname.startsWith("/api/hunt/") && process.env.CRON_SECRET && req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`) return NextResponse.next();
   if (await validSession(req.cookies.get(COOKIE)?.value)) return NextResponse.next();
   const url = req.nextUrl.clone();
   url.pathname = "/login";

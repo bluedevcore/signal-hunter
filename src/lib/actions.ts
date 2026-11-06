@@ -124,3 +124,23 @@ The prompt must ask for: realistic synthetic sample data for their industry (no 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/builds");
 }
+
+export async function startHuntAction() {
+  const { startHunt } = await import("./hunt/engine");
+  await startHunt("manual");
+  revalidatePath("/hunts");
+  redirect("/hunts");
+}
+
+export async function startBackfillAction() {
+  const { startBackfill } = await import("./hunt/engine");
+  await startBackfill(true);
+  revalidatePath("/hunts");
+  redirect("/hunts");
+}
+
+export async function stopRunAction(formData: FormData) {
+  const db = await getDb();
+  await db.update(schema.runs).set({ status: "failed", error: "Stopped by you", finishedAt: new Date(), lockedUntil: null }).where(eq(schema.runs.id, Number(formData.get("runId"))));
+  revalidatePath("/hunts");
+}

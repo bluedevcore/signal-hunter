@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { claudeConfigured } from "@/lib/claude";
+import { SETTINGS } from "@/lib/hunt/config";
 
 const KEYS: [string, string, string][] = [
   ["DATABASE_URL", "Neon Postgres", "Added by the Vercel Neon integration"],
   ["APP_PASSWORD", "Login password", "Protects the app"],
   ["AUTH_SECRET", "Session signing", "Any long random string"],
-  ["ANTHROPIC_API_KEY", "Claude", "Call scripts and build briefs now; diagnosis in step 4"],
-  ["REED_API_KEY", "Reed jobs API", "Hunt pipeline (step 3)"],
-  ["COMPANIES_HOUSE_API_KEY", "Companies House", "Company check (step 5)"],
-  ["APIFY_TOKEN", "Apify Google Maps", "Phone and website (step 5)"],
-  ["GETLEADS_API_KEY", "GetLeads", "Decision makers (step 5, optional)"],
+  ["ANTHROPIC_API_KEY", "Claude", "Diagnosis, call scripts and build briefs"],
+  ["REED_API_KEY", "Reed jobs API", "Weekly scan"],
+  ["COMPANIES_HOUSE_API_KEY", "Companies House", "Company size and directors"],
+  ["APIFY_TOKEN", "Apify Google Maps", "Phone and website from Google Maps"],
+  ["CRON_SECRET", "Cron secret", "Lets the weekly hunt run by itself"],
 ];
 
 export default function SettingsPage() {
@@ -35,7 +36,8 @@ export default function SettingsPage() {
       </section>
       <section className="card p-7 flex flex-col gap-2">
         <h2 className="m-0 text-xl font-bold">Hunt filters</h2>
-        <p className="m-0 text-sm text-mute">Keywords, salary range (£18k–£100k), days back (7) and the agency / public-sector / big-brand rules become editable here with the hunt pipeline in build step 3.</p>
+        <p className="m-0 text-sm text-mute">{SETTINGS.keywords.length} Reed keywords · salary £{SETTINGS.salaryMin.toLocaleString("en-GB")}–£{SETTINGS.salaryMax.toLocaleString("en-GB")} · last {SETTINGS.daysBack} days · direct employers only · max {SETTINGS.maxOpeningsPerEmployer} openings per employer. Rules live in <code>src/lib/hunt/config.ts</code>.</p>
+        <p className="m-0 text-[13px] text-mute leading-relaxed">{SETTINGS.keywords.join(" · ")}</p>
         <Link href="/setup" className="text-sm font-semibold text-accent">Database setup →</Link>
       </section>
     </>

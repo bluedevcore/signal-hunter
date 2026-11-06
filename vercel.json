@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/hunt/start", "schedule": "0 6 * * 1" },
+    { "path": "/api/hunt/tick", "schedule": "30 7 * * *" }
+  ]
+}

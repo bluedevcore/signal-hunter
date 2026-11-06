@@ -5,8 +5,12 @@ export const runs = pgTable("runs", {
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
   trigger: text("trigger").notNull(), // cron | manual | seed
+  kind: text("kind").notNull().default("hunt"), // hunt | backfill
   label: text("label"),
-  status: text("status").notNull().default("done"),
+  status: text("status").notNull().default("done"), // running | done | failed
+  phase: text("phase"), // scan | filter | describe | diagnose | company | enrich | leads | done
+  cursor: jsonb("cursor").$type<Record<string, unknown>>(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
   counts: jsonb("counts").$type<Record<string, number>>(),
   costEstimateGbp: text("cost_estimate_gbp"),
   error: text("error"),
@@ -34,6 +38,8 @@ export const jobs = pgTable("jobs", {
   source: text("source").notNull().default("reed"),
   sourceJobId: text("source_job_id").notNull(),
   companyId: integer("company_id").references(() => companies.id),
+  companyName: text("company_name"),
+  state: text("state").notNull().default("new"), // new | kept | dropped | described | diagnosed | weak | checked | large | enriched | lead
   title: text("title").notNull(),
   location: text("location"),
   salaryText: text("salary_text"),

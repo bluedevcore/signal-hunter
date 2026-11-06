@@ -80,7 +80,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             <input name="q" type="search" defaultValue={sp.q} placeholder="Search company, role or duty…" className="border-0 outline-none bg-transparent text-sm w-full" />
           </label>
         </form>
-        <button className="btn btn-dark h-11" disabled title="The hunt pipeline arrives in build step 3">Run hunt now</button>
+        <Link href="/hunts" className="btn btn-dark h-11">Run hunt</Link>
       </div>
 
       <h1 className="kicker m-0">Leads · {all.length} in the CRM</h1>

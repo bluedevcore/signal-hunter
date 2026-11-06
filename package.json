@@ -8,7 +8,8 @@
     "start": "next start",
     "db:generate": "drizzle-kit generate",
     "seed": "tsx scripts/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "hunt": "tsx scripts/hunt.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

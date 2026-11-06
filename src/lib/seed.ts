@@ -88,7 +88,7 @@ export async function seed({ reset = false } = {}): Promise<string> {
       closesAt: ukDate(r.closes), url: r.ad_link,
       responsibilities: r.responsibilities ? r.responsibilities.split(" | ").map((s) => s.trim()).filter(Boolean) : null,
       responsibilitiesSource: r.responsibilities ? "section" : null,
-      runId: r.scan.startsWith("core") ? runA[0].id : runB[0].id, scan: r.scan,
+      runId: r.scan.startsWith("core") ? runA[0].id : runB[0].id, scan: r.scan, state: "seeded", companyName: r.company,
     }).returning();
 
     const ease = parseInt(r.ease_of_build_1to5, 10);
