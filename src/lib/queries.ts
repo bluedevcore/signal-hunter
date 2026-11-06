@@ -11,7 +11,8 @@ export async function dbReady(): Promise<boolean> {
     const db = await getDb();
     await db.select({ n: sql<number>`1` }).from(leads).limit(1);
     return true;
-  } catch {
+  } catch (e) {
+    console.error("dbReady:", e instanceof Error ? `${e.message} ${(e as Error & { cause?: Error }).cause?.message ?? ""}` : e);
     return false;
   }
 }
