@@ -22,8 +22,16 @@ export async function login(formData: FormData) {
 
 export async function setupDatabase(formData: FormData) {
   const reset = formData.get("reset") === "on";
-  await migrateDb();
-  const msg = await seed({ reset });
+  let msg: string;
+  try {
+    await migrateDb();
+    msg = await seed({ reset });
+  } catch (e) {
+    const err = e as Error & { cause?: Error };
+    const detail = [err.message, err.cause?.message].filter(Boolean).join(" · ").slice(0, 600);
+    console.error("setup failed", e);
+    redirect(`/setup?error=${encodeURIComponent(detail)}`);
+  }
   revalidatePath("/", "layout");
   redirect(`/setup?done=${encodeURIComponent(msg)}`);
 }

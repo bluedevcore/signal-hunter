@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && tsx scripts/embed.ts",
     "seed": "tsx scripts/seed.ts",
     "typecheck": "tsc --noEmit",
-    "hunt": "tsx scripts/hunt.ts"
+    "hunt": "tsx scripts/hunt.ts",
+    "prebuild": "tsx scripts/embed.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",

@@ -21,6 +21,7 @@ async function create(): Promise<{ db: DB; kind: "neon" | "pg" | "pglite" }> {
     const { drizzle } = await import("drizzle-orm/neon-http");
     return { db: drizzle(neon(url), { schema }) as unknown as DB, kind: "neon" };
   }
+  if (process.env.VERCEL) throw new Error("DATABASE_URL is not set. Add your Supabase Transaction pooler URI in Vercel → Settings → Environment Variables, then redeploy.");
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
   const client = new PGlite(process.env.PGLITE_DIR || "./.pglite");
@@ -36,20 +37,21 @@ export async function getDb(): Promise<DB> {
   return g.__db;
 }
 
+/** Applies any migration not yet recorded in sh_migrations. Migrations are embedded at build time (scripts/embed.ts). */
 export async function migrateDb() {
   const db = await getDb();
-  if (g.__dbKind === "pg") {
-    const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await migrate(db as any, { migrationsFolder: "./drizzle" });
-  } else if (g.__dbKind === "neon") {
-    const { migrate } = await import("drizzle-orm/neon-http/migrator");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await migrate(db as any, { migrationsFolder: "./drizzle" });
-  } else {
-    const { migrate } = await import("drizzle-orm/pglite/migrator");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await migrate(db as any, { migrationsFolder: "./drizzle" });
+  const { sql } = await import("drizzle-orm");
+  const { MIGRATIONS } = await import("@/generated/migrations");
+  await db.execute(sql.raw(`create table if not exists sh_migrations (tag text primary key, applied_at timestamptz default now())`));
+  const done = await db.execute(sql.raw(`select tag from sh_migrations`));
+  const rows = ("rows" in (done as object) ? (done as unknown as { rows: { tag: string }[] }).rows : (done as unknown as { tag: string }[]));
+  const applied = new Set(rows.map((r) => r.tag));
+  for (const m of MIGRATIONS) {
+    if (applied.has(m.tag)) continue;
+    for (const stmt of m.sql.split("--> statement-breakpoint").map((x) => x.trim()).filter(Boolean)) {
+      await db.execute(sql.raw(stmt));
+    }
+    await db.execute(sql`insert into sh_migrations (tag) values (${m.tag})`);
   }
 }
 

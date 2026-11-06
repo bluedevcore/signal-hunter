@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import { parse } from "csv-parse/sync";
+import { SEED_FILES } from "@/generated/seed-data";
 import { sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { normaliseName, reedIdFromUrl, ukDate } from "./util";
@@ -35,8 +34,7 @@ const WESTONE_COVERAGE = [
 ] as const;
 
 function readCsv<T>(file: string): T[] {
-  const p = path.join(process.cwd(), "seed", file);
-  return parse(fs.readFileSync(p, "utf8"), { columns: true, skip_empty_lines: true }) as T[];
+  return parse(SEED_FILES[file], { columns: true, skip_empty_lines: true }) as T[];
 }
 
 function toolFor(status: string): string | null {
